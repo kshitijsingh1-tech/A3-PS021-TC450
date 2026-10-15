@@ -19,7 +19,6 @@
 | **Team Code** | `A3-PS021-TC450` |
 | **Mentor** | **Prof. Rajni Devi** |
 | **Team Members** | **Kshitij Singh**, **Kiranpreet Kaur** |
-| **Repository** | [github.com/kshitijsingh1-tech/A3-PS021-TC450](https://github.com/kshitijsingh1-tech/A3-PS021-TC450) |
 
 ---
 

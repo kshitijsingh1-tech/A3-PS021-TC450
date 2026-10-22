@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PS-021 | Dialog Correlation & Recovery Across Agent Adapters</title>
+  <meta name="description" content="Interactive showcase of PS-021: Experimental Dialog Correlation and Recovery Across Agent Adapters. Simulates real fault-injection scenarios with animated state machines, adapter communication, and crash recovery." />
+  <meta name="author" content="Team Cache Us If You Can (A3-PS021-TC450)" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- NAVBAR -->
+  <header class="navbar" id="navbar">
+    <a class="logo" href="#home">PS<span>-021</span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="navMenu">
+      <a href="#home">Home</a>
+      <a href="#problem">Problem</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#identities">Identity Model</a>
+      <a href="#state-machine">State Machine</a>
+      <a href="#scenarios">Live Scenarios</a>
+      <a href="#team">Team</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 1. HERO -->
+    <section id="home" class="hero section">
+      <div class="hero-text">
+        <p class="eyebrow">AIORI HACKATHON 3 -- PS-021</p>
+        <h1>Dialog Correlation <span>&</span> Recovery</h1>
+        <p class="subtitle">Across Agent Adapters</p>
+        <p class="hero-desc">
+          A minimal, working prototype proving that two agent adapters can maintain stable task identity,
+          suppress duplicate side effects, and recover from real process crashes -- all using atomic
+          SQLite transactions and a 6-state lifecycle state machine.
+        </p>
+        <div class="hero-actions">
+          <a href="#scenarios" class="btn">Run Live Scenarios</a>
+          <a href="https://youtu.be/7fRWo1-o7_k" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Watch Demo Video</a>
+        </div>
+        <div class="hero-badges">
+          <span class="badge">Python 3.11+</span>
+          <span class="badge">FastAPI</span>
+          <span class="badge">SQLite WAL</span>
+          <span class="badge">Pydantic v2</span>
+          <span class="badge">13 Tests Passing</span>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="adapter-pair-viz">
+          <div class="adapter-box adapter-a-box">
+            <div class="adapter-label">Adapter A</div>
+            <div class="adapter-role">Client / Caller</div>
+            <div class="adapter-detail">Envelope + Retry</div>
+          </div>
+          <div class="transport-lane">
+            <div class="transport-arrow">
+              <div class="packet packet-out" id="heroPacketOut"></div>
+              <svg class="arrow-svg" viewBox="0 0 200 20"><path d="M0 10 L180 10" stroke="currentColor" stroke-width="2" stroke-dasharray="6,4"/><polygon points="180,4 195,10 180,16" fill="currentColor"/></svg>
+            </div>
+            <div class="transport-label">POST /dialog/task</div>
+            <div class="transport-arrow reverse">
+              <div class="packet packet-in" id="heroPacketIn"></div>
+              <svg class="arrow-svg" viewBox="0 0 200 20"><path d="M200 10 L20 10" stroke="currentColor" stroke-width="2" stroke-dasharray="6,4"/><polygon points="20,4 5,10 20,16" fill="currentColor"/></svg>
+            </div>
+            <div class="transport-label">200 COMPLETED / 202 / 409</div>
+          </div>
+          <div class="adapter-box adapter-b-box">
+            <div class="adapter-label">Adapter B</div>
+            <div class="adapter-role">Server / FastAPI</div>
+            <div class="adapter-detail">Idempotency + Recovery</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PROBLEM -->
+    <section id="problem" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">01 -- THE FAILURE BOUNDARY</p>
+        <h2>A Missing Response Is Not Proof of a Missing Execution</h2>
+      </div>
+      <div class="problem-grid">
+        <div class="problem-card card">
+          <div class="problem-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h3>Ambiguous Timeouts</h3>
+          <p>When a client times out, it cannot know if the server executed the request, is still executing, or never received it. The uncertainty is the core problem.</p>
+        </div>
+        <div class="problem-card card">
+          <div class="problem-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </div>
+          <h3>Dangerous Retries</h3>
+          <p>Retrying without stable task identity risks double-execution of critical operations: duplicate payments, duplicate bookings, repeated external API calls.</p>
+        </div>
+        <div class="problem-card card">
+          <div class="problem-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          </div>
+          <h3>Heterogeneous Adapters</h3>
+          <p>Different agent adapters represent context and lifecycle differently. A common correlation schema is needed for reliable cross-adapter communication.</p>
+        </div>
+        <div class="problem-card card">
+          <div class="problem-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <h3>Crash Recovery</h3>
+          <p>A server process crash between accepting work and committing results leaves state in limbo. The system must reconcile or resume safely on restart.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ARCHITECTURE -->
+    <section id="architecture" class="section section-dark">
+      <div class="section-heading">
+        <p class="eyebrow">02 -- SYSTEM ARCHITECTURE</p>
+        <h2>Two Adapters, One Durable Truth</h2>
+      </div>
+      <div class="arch-container">
+        <div class="arch-diagram">
+          <!-- Adapter A -->
+          <div class="arch-block arch-adapter-a" id="archAdapterA">
+            <div class="arch-block-header">ADAPTER A (Client Mock)</div>
+            <div class="arch-internals">
+              <div class="arch-module" data-tooltip="Agent or business logic that initiates task requests">Caller / Agent Task</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module" data-tooltip="Stamps dialog_id, idempotency_key, fresh request_id, and attempt counter onto every outgoing message">Envelope Formatter</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module" data-tooltip="Sends HTTP POST with exponential backoff. Generates a new request_id per attempt while preserving dialog_id and idempotency_key">HTTP Client + Retry Manager</div>
+            </div>
+          </div>
+
+          <!-- Transport -->
+          <div class="arch-transport" id="archTransport">
+            <div class="arch-transport-line">
+              <span class="arch-transport-text">POST /dialog/task</span>
+              <div class="arch-transport-dot" id="archDotForward"></div>
+            </div>
+            <div class="arch-transport-line reverse">
+              <span class="arch-transport-text">200 / 202 / 409</span>
+              <div class="arch-transport-dot" id="archDotReverse"></div>
+            </div>
+          </div>
+
+          <!-- Adapter B -->
+          <div class="arch-block arch-adapter-b" id="archAdapterB">
+            <div class="arch-block-header">ADAPTER B (FastAPI Server)</div>
+            <div class="arch-internals">
+              <div class="arch-module" data-tooltip="Receives DialogMessage JSON envelope and routes to the IdempotencyEngine">FastAPI Route Handler</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module arch-module-highlight" data-tooltip="Atomic registration via BEGIN IMMEDIATE, conflict detection via SHA-256 payload hash, dedup for completed/running requests">Idempotency Engine</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module" data-tooltip="Enforces RECEIVED -> ACCEPTED -> RUNNING -> COMPLETED transitions. Validates every state change against allowed transition rules.">6-State Lifecycle Machine</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module" data-tooltip="Executes business logic (payment_transfer, reservation, generic) and records in the side_effects ledger within the same SQLite transaction">Side-Effect Executor</div>
+            </div>
+          </div>
+
+          <!-- Storage -->
+          <div class="arch-block arch-storage" id="archStorage">
+            <div class="arch-block-header">SQLite WAL Storage</div>
+            <div class="arch-tables">
+              <div class="arch-table" data-tooltip="Tracks dialog_id, created_at, updated_at for each logical conversation">dialogs</div>
+              <div class="arch-table" data-tooltip="Primary idempotency registry. Uniqueness constraint on idempotency_key. Stores status, attempt, version, result, payload_hash">operations</div>
+              <div class="arch-table arch-table-highlight" data-tooltip="Durable evidence ledger. Used by Recovery Manager to determine if a side effect was committed before a crash">side_effects</div>
+              <div class="arch-table" data-tooltip="Audit trail of every lifecycle state transition, including timestamps and details">event_log</div>
+            </div>
+          </div>
+
+          <!-- Recovery -->
+          <div class="arch-block arch-recovery" id="archRecovery">
+            <div class="arch-block-header">Startup Recovery Manager</div>
+            <div class="arch-internals">
+              <div class="arch-module" data-tooltip="Runs during FastAPI lifespan boot, BEFORE accepting any inbound traffic">Boot Lifecycle Hook</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module" data-tooltip="Queries operations table for non-terminal statuses (RECEIVED, ACCEPTED, RUNNING, RECOVERING)">Inspect Interrupted Ops</div>
+              <div class="arch-arrow-down"></div>
+              <div class="arch-module" data-tooltip="Cross-references the side_effects ledger. If effect committed: reconcile without re-execution. If not: resume safely through RECOVERING -> RUNNING -> COMPLETED">Reconcile or Resume</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. IDENTITY MODEL -->
+    <section id="identities" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">03 -- IDENTITY MODEL</p>
+        <h2>Three Identities, One Logical Task</h2>
+      </div>
+      <div class="identity-grid">
+        <div class="identity-card card" id="idDialogId">
+          <div class="identity-tag">STABLE</div>
+          <h3>dialog_id</h3>
+          <p class="identity-example"><code>dlg_payment_2024_q4</code></p>
+          <p>Persistent correlation identifier for the long-lived conversation or workflow. Remains the same across all retries, all operations, and all process restarts.</p>
+          <div class="identity-scope">Scope: Entire conversation</div>
+        </div>
+        <div class="identity-card card" id="idIdempKey">
+          <div class="identity-tag">STABLE</div>
+          <h3>idempotency_key</h3>
+          <p class="identity-example"><code>pay_inv_42_v1</code></p>
+          <p>Client-chosen unique key for one intended business side effect. Two requests with the same key and same payload are deduplicated. Different payloads trigger 409 Conflict.</p>
+          <div class="identity-scope">Scope: One business operation</div>
+        </div>
+        <div class="identity-card card" id="idRequestId">
+          <div class="identity-tag tag-dynamic">DYNAMIC</div>
+          <h3>request_id</h3>
+          <p class="identity-example"><code>req_a7b3c9d4e1f2</code></p>
+          <p>Fresh UUID generated for every HTTP transmission attempt. Even if the same logical task is retried, each wire-level request carries a unique request_id.</p>
+          <div class="identity-scope">Scope: One network transmission</div>
+        </div>
+        <div class="identity-card card" id="idAttempt">
+          <div class="identity-tag tag-dynamic">COUNTER</div>
+          <h3>attempt</h3>
+          <p class="identity-example"><code>1, 2, 3, ...</code></p>
+          <p>Monotonically increasing integer tracking how many times Adapter A has transmitted this logical request. Used for retry policy decisions and audit.</p>
+          <div class="identity-scope">Scope: Retry sequence</div>
+        </div>
+      </div>
+      <div class="identity-demo">
+        <h3>Interactive Retry Trace</h3>
+        <p class="identity-demo-desc">Click "Send Request" to see how identities behave across multiple transmission attempts:</p>
+        <div class="retry-trace-container">
+          <div class="retry-controls">
+            <button class="btn" id="retryTraceBtn">Send Request</button>
+            <button class="btn btn-secondary" id="retryResetBtn">Reset</button>
+          </div>
+          <div class="retry-trace" id="retryTrace">
+            <div class="retry-header">
+              <span>Attempt</span><span>dialog_id</span><span>idempotency_key</span><span>request_id</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. STATE MACHINE -->
+    <section id="state-machine" class="section section-dark">
+      <div class="section-heading">
+        <p class="eyebrow">04 -- LIFECYCLE STATE MACHINE</p>
+        <h2>Six Explicit States, Guarded Transitions</h2>
+      </div>
+      <div class="sm-container">
+        <div class="sm-diagram" id="smDiagram">
+          <div class="sm-node sm-received" id="smReceived" data-state="RECEIVED">
+            <div class="sm-node-label">RECEIVED</div>
+            <div class="sm-node-desc">Registered in DB</div>
+          </div>
+          <div class="sm-edge sm-edge-ra" id="smEdgeRA"><div class="sm-edge-label">accept</div></div>
+          <div class="sm-node sm-accepted" id="smAccepted" data-state="ACCEPTED">
+            <div class="sm-node-label">ACCEPTED</div>
+            <div class="sm-node-desc">Ready to execute</div>
+          </div>
+          <div class="sm-edge sm-edge-ar" id="smEdgeAR"><div class="sm-edge-label">start</div></div>
+          <div class="sm-node sm-running" id="smRunning" data-state="RUNNING">
+            <div class="sm-node-label">RUNNING</div>
+            <div class="sm-node-desc">Executing side effect</div>
+          </div>
+          <div class="sm-edge sm-edge-rc" id="smEdgeRC"><div class="sm-edge-label">commit</div></div>
+          <div class="sm-node sm-completed" id="smCompleted" data-state="COMPLETED">
+            <div class="sm-node-label">COMPLETED</div>
+            <div class="sm-node-desc">Terminal state</div>
+          </div>
+          <div class="sm-node sm-recovering" id="smRecovering" data-state="RECOVERING">
+            <div class="sm-node-label">RECOVERING</div>
+            <div class="sm-node-desc">Crash detected</div>
+          </div>
+          <div class="sm-node sm-failed" id="smFailed" data-state="FAILED">
+            <div class="sm-node-label">FAILED</div>
+            <div class="sm-node-desc">Error state</div>
+          </div>
+        </div>
+        <div class="sm-controls">
+          <h3>Interactive State Walkthrough</h3>
+          <p>Step through a normal task lifecycle or simulate a crash recovery path:</p>
+          <div class="sm-btn-group">
+            <button class="btn sm-path-btn" data-path="normal" id="smNormalBtn">Normal Path</button>
+            <button class="btn btn-secondary sm-path-btn" data-path="crash" id="smCrashBtn">Crash Recovery Path</button>
+            <button class="btn btn-secondary sm-path-btn" data-path="reset" id="smResetBtn">Reset</button>
+          </div>
+          <div class="sm-log" id="smLog"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. LIVE SCENARIOS -->
+    <section id="scenarios" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">05 -- LIVE SCENARIO SIMULATION</p>
+        <h2>Six Real Failure Scenarios, Fully Animated</h2>
+        <p class="section-desc">Each scenario simulates the exact behavior of the real Python system. Click a scenario to watch the adapters communicate, state transitions fire, and recovery protocols execute in real time.</p>
+      </div>
+
+      <div class="scenario-selector">
+        <button class="scenario-tab active" data-scenario="1">
+          <span class="scenario-num">01</span>
+          <span class="scenario-name">Lost Request</span>
+        </button>
+        <button class="scenario-tab" data-scenario="2">
+          <span class="scenario-num">02</span>
+          <span class="scenario-name">Crash Mid-Exec</span>
+        </button>
+        <button class="scenario-tab" data-scenario="3">
+          <span class="scenario-num">03</span>
+          <span class="scenario-name">Lost Response</span>
+        </button>
+        <button class="scenario-tab" data-scenario="4">
+          <span class="scenario-num">04</span>
+          <span class="scenario-name">Concurrent Dupes</span>
+        </button>
+        <button class="scenario-tab" data-scenario="5">
+          <span class="scenario-num">05</span>
+          <span class="scenario-name">Mixed Recovery</span>
+        </button>
+        <button class="scenario-tab" data-scenario="6">
+          <span class="scenario-num">06</span>
+          <span class="scenario-name">Payload Conflict</span>
+        </button>
+      </div>
+
+      <div class="scenario-stage" id="scenarioStage">
+        <!-- Scenario info panel -->
+        <div class="scenario-info" id="scenarioInfo">
+          <h3 id="scenarioTitle">Scenario 1: Request Lost Before Delivery</h3>
+          <p id="scenarioDesc">The first HTTP request never reaches Adapter B due to a network failure. Adapter A's retry policy detects the timeout and retransmits with a fresh request_id but the same dialog_id and idempotency_key. The second attempt succeeds normally.</p>
+          <div class="scenario-meta">
+            <span class="scenario-meta-item"><strong>Expected:</strong> <span id="scenarioExpected">COMPLETED on retry</span></span>
+            <span class="scenario-meta-item"><strong>Side Effects:</strong> <span id="scenarioEffects">Exactly 1</span></span>
+          </div>
+        </div>
+
+        <!-- Animated simulation area -->
+        <div class="sim-area">
+          <div class="sim-adapter sim-adapter-a" id="simAdapterA">
+            <div class="sim-adapter-header">Adapter A (Client)</div>
+            <div class="sim-adapter-state" id="simAdapterAState">IDLE</div>
+            <div class="sim-envelope" id="simEnvelope">
+              <div class="sim-env-row"><span>dialog_id:</span><span id="simDialogId">dlg_s1_demo</span></div>
+              <div class="sim-env-row"><span>idemp_key:</span><span id="simIdempKey">idemp_s1</span></div>
+              <div class="sim-env-row"><span>request_id:</span><span id="simReqId">--</span></div>
+              <div class="sim-env-row"><span>attempt:</span><span id="simAttempt">0</span></div>
+            </div>
+          </div>
+
+          <div class="sim-wire" id="simWire">
+            <div class="sim-packet-area">
+              <div class="sim-packet" id="simPacket"></div>
+            </div>
+            <div class="sim-wire-label" id="simWireLabel"></div>
+          </div>
+
+          <div class="sim-adapter sim-adapter-b" id="simAdapterB">
+            <div class="sim-adapter-header">Adapter B (Server)</div>
+            <div class="sim-adapter-state" id="simAdapterBState">LISTENING</div>
+            <div class="sim-db" id="simDb">
+              <div class="sim-db-header">SQLite State</div>
+              <div class="sim-db-row"><span>Status:</span><span id="simDbStatus">--</span></div>
+              <div class="sim-db-row"><span>Version:</span><span id="simDbVersion">--</span></div>
+              <div class="sim-db-row"><span>Side Effects:</span><span id="simDbEffects">0</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log output -->
+        <div class="sim-log-container">
+          <div class="sim-log-header">
+            <span>Event Log</span>
+            <span class="sim-log-status" id="simLogStatus">Ready</span>
+          </div>
+          <div class="sim-log" id="simLog"></div>
+        </div>
+
+        <div class="scenario-controls">
+          <button class="btn" id="simRunBtn">Run Scenario</button>
+          <button class="btn btn-secondary" id="simResetBtn">Reset</button>
+          <div class="scenario-result" id="scenarioResult"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. INVARIANTS -->
+    <section id="invariants" class="section section-dark">
+      <div class="section-heading">
+        <p class="eyebrow">06 -- VERIFIED INVARIANTS</p>
+        <h2>What This System Guarantees</h2>
+      </div>
+      <div class="invariant-grid">
+        <div class="invariant-card">
+          <div class="invariant-status verified">VERIFIED</div>
+          <h3>No Duplicate Side Effects</h3>
+          <p>Domain action ledger checks executed records in single transaction before commit.</p>
+        </div>
+        <div class="invariant-card">
+          <div class="invariant-status verified">VERIFIED</div>
+          <h3>Idempotent Retry Safety</h3>
+          <p>Completed operations return cached response; running operations return 202 In Progress.</p>
+        </div>
+        <div class="invariant-card">
+          <div class="invariant-status verified">VERIFIED</div>
+          <h3>Crash Durability</h3>
+          <p>Uncommitted work rolls back cleanly; committed work survives SIGKILL process termination.</p>
+        </div>
+        <div class="invariant-card">
+          <div class="invariant-status verified">VERIFIED</div>
+          <h3>Identity Preservation</h3>
+          <p>dialog_id and idempotency_key are preserved across retries and crashes.</p>
+        </div>
+        <div class="invariant-card">
+          <div class="invariant-status verified">VERIFIED</div>
+          <h3>Payload Integrity</h3>
+          <p>Reusing an idempotency key with different payload triggers HTTP 409 Conflict.</p>
+        </div>
+        <div class="invariant-card">
+          <div class="invariant-status verified">VERIFIED</div>
+          <h3>Concurrent Serialization</h3>
+          <p>BEGIN IMMEDIATE prevents race conditions during simultaneous identical submissions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. TEAM -->
+    <section id="team" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">07 -- TEAM</p>
+        <h2>Cache Us If You Can</h2>
+      </div>
+      <div class="team-container">
+        <div class="team-info card">
+          <table class="team-table">
+            <tr><td>Hackathon</td><td>AIORI Hackathon 3 (AIORI-3)</td></tr>
+            <tr><td>Problem Statement</td><td>PS-021: Experimental Dialog Correlation and Recovery Across Agent Adapters</td></tr>
+            <tr><td>Team Code</td><td><code>A3-PS021-TC450</code></td></tr>
+            <tr><td>Mentor</td><td>Prof. Rajni Devi</td></tr>
+            <tr><td>Members</td><td>Kshitij Singh, Kiranpreet Kaur</td></tr>
+          </table>
+        </div>
+        <div class="team-links card">
+          <h3>Project Links</h3>
+          <a href="https://github.com/kshitijsingh1-tech/A3-PS021-TC450" target="_blank" rel="noopener noreferrer" class="team-link">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            GitHub Repository
+          </a>
+          <a href="https://youtu.be/7fRWo1-o7_k" target="_blank" rel="noopener noreferrer" class="team-link">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            Demo Video
+          </a>
+        </div>
+      </div>
+      <div class="disclaimer">
+        <strong>Disclaimer:</strong> This project implements an experimental schema and reference architecture.
+        It does not claim official IETF standard compliance, complete MCP/A2A interoperability,
+        or universal exactly-once delivery across uncoordinated external services.
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>PS-021: Experimental Dialog Correlation & Recovery Across Agent Adapters</p>
+    <p>Team: Cache Us If You Can (A3-PS021-TC450) | AIORI Hackathon 3</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

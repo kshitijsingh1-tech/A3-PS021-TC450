@@ -28,6 +28,8 @@
   *Covers team introduction, problem statement breakdown, architectural design, and live execution of automated fault-injection and recovery scenarios.*
 - **Presentation (PDF):** [`PS-021-Experimental-Dialog-Correlation-and-Recovery-Across-Agent-Adapters.pdf`](PS-021-Experimental-Dialog-Correlation-and-Recovery-Across-Agent-Adapters.pdf)  
   *Structured strictly according to the official hackathon template structure ([`Proposed-structure-hackathon.pdf`](Proposed-structure-hackathon.pdf)).*
+- **Interactive Showcase Webpage:** [`docs/demo-site/index.html`](docs/demo-site/index.html)  
+  *Interactive visual dashboard simulating real fault injection and recovery scenarios across Adapter A and Adapter B, animated 6-state lifecycle transitions, and live retry traces.*
 - **Working Demo Script:** Run `python demo.py` for full automated scenario reproduction.
 - **Automated Test Suite:** 13 verified pytest test cases with live process crash injection (`python -m pytest -v`).
 - **Comprehensive Technical Documentation:**
@@ -92,6 +94,10 @@ A3-PS021-TC450/
 │   ├── test_scenario_5_mixed_recovery.py     # Scenario 5: Mixed completed & pending recovery
 │   └── test_scenario_6_idempotency_conflict.py # Scenario 6: 409 conflict payload mismatch
 └── docs/                          # Detailed engineering documentation
+    ├── demo-site/                 # Interactive visual simulation webpage
+    │   ├── index.html             # Interactive showcase application
+    │   ├── style.css              # Dark theme with warm earthy accents
+    │   └── script.js              # Scenario simulation engine & trace visualizer
     ├── architecture.md            # Architectural overview & Mermaid sequence flows
     ├── schema.md                  # Envelope fields, payload hashing & state matrix
     ├── pseudocode.md              # Algorithmic pseudocode for core mechanisms

@@ -257,7 +257,7 @@
           <!-- Primary Lifecycle Pipeline -->
           <div class="sm-lane sm-lane-primary">
             <div class="sm-lane-title">
-              <span class="sm-lane-pill">HAPPY PATH</span>
+              <span class="sm-lane-pill">PRIMARY LIFECYCLE</span>
               <span class="sm-lane-subtitle">Standard Execution Pipeline</span>
             </div>
             <div class="sm-pipeline">
@@ -295,7 +295,7 @@
               </div>
 
               <div class="sm-node sm-completed" id="smCompleted" data-state="COMPLETED">
-                <span class="sm-step-badge terminal-badge">&#10003;</span>
+                <span class="sm-step-badge terminal-badge">04</span>
                 <div class="sm-node-label">COMPLETED</div>
                 <div class="sm-node-desc">Durable Terminal State</div>
               </div>
@@ -305,8 +305,8 @@
           <!-- Fault Recovery & Guarded States -->
           <div class="sm-lane sm-lane-secondary">
             <div class="sm-lane-title">
-              <span class="sm-lane-pill pill-warning">RESILIENCY</span>
-              <span class="sm-lane-subtitle">Automated Crash Recovery &amp; Failure Protocols</span>
+              <span class="sm-lane-pill pill-warning">FAULT TOLERANCE</span>
+              <span class="sm-lane-subtitle">Automated Crash Recovery &amp; State Reversion</span>
             </div>
             <div class="sm-branch-grid">
               <div class="sm-branch-card">
@@ -315,13 +315,13 @@
                   <span class="connector-arrow">&darr;</span>
                 </div>
                 <div class="sm-node sm-recovering" id="smRecovering" data-state="RECOVERING">
-                  <span class="sm-step-badge badge-warning">&#9889;</span>
+                  <span class="sm-step-badge badge-warning">REC</span>
                   <div class="sm-node-label">RECOVERING</div>
                   <div class="sm-node-desc">Startup Inspection via Durable Ledger</div>
                 </div>
                 <div class="sm-branch-actions">
-                  <span class="branch-tag tag-resume">Resume to RUNNING if uncommitted</span>
-                  <span class="branch-tag tag-reconcile">Reconcile to COMPLETED if committed</span>
+                  <span class="branch-tag tag-resume">Uncommitted: Resume to RUNNING</span>
+                  <span class="branch-tag tag-reconcile">Committed: Reconcile to COMPLETED</span>
                 </div>
               </div>
 
@@ -331,16 +331,17 @@
                   <span class="connector-arrow">&darr;</span>
                 </div>
                 <div class="sm-node sm-failed" id="smFailed" data-state="FAILED">
-                  <span class="sm-step-badge badge-error">&#10007;</span>
+                  <span class="sm-step-badge badge-error">ERR</span>
                   <div class="sm-node-label">FAILED</div>
                   <div class="sm-node-desc">Terminal Error State</div>
                 </div>
                 <div class="sm-branch-actions">
-                  <span class="branch-tag tag-retry">Re-enqueued to ACCEPTED on retry</span>
+                  <span class="branch-tag tag-retry">Retry policy: Re-enqueue to ACCEPTED</span>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
         <div class="sm-controls">
           <h3>Interactive State Walkthrough</h3>

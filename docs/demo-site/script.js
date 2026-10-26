@@ -123,13 +123,14 @@ function randHex(len) { return [...Array(len)].map(() => Math.floor(Math.random(
   crashBtn?.addEventListener('click', () => {
     runPath([
       { state: 'RECEIVED', detail: 'Registered in SQLite' },
-      { state: 'ACCEPTED', from: 'RECEIVED', detail: 'Validated' },
-      { state: 'RUNNING', from: 'ACCEPTED', detail: 'Executing...' },
-      { state: 'RECOVERING', from: 'RUNNING', detail: '** CRASH DETECTED ** Process killed' },
+      { state: 'ACCEPTED', from: 'RECEIVED', detail: 'Validated and queued' },
+      { state: 'RUNNING', from: 'ACCEPTED', detail: 'Executing side effect...' },
+      { state: 'RECOVERING', from: 'RUNNING', detail: 'Process crash simulated; startup recovery initiated' },
       { state: 'RUNNING', from: 'RECOVERING', detail: 'Recovery Manager resumes execution' },
-      { state: 'COMPLETED', from: 'RUNNING', detail: 'Side effect committed on second attempt' },
+      { state: 'COMPLETED', from: 'RUNNING', detail: 'Committed atomically on retry' },
     ]);
   });
+
 
   resetBtn?.addEventListener('click', () => {
     running = false;

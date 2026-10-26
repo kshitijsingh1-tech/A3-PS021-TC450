@@ -1,0 +1,19 @@
+{
+  "name": "a3-ps021-tc450-showcase",
+  "version": "1.0.0",
+  "description": "Interactive showcase for PS-021: Dialog Correlation & Recovery Across Agent Adapters",
+  "scripts": {
+    "dev": "npx serve docs/demo-site -l 3000",
+    "start": "npx serve docs/demo-site -l 3000",
+    "test": "python -m pytest -v",
+    "demo": "python demo.py"
+  },
+  "keywords": [
+    "aiori",
+    "hackathon",
+    "dialog-correlation",
+    "agent-recovery"
+  ],
+  "author": "Cache Us If You Can",
+  "license": "MIT"
+}

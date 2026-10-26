@@ -209,7 +209,14 @@ def create_app(custom_db_path: Optional[str] = None) -> FastAPI:
         sys.stderr.flush()
         os._exit(99)
 
+    # Mount showcase static website at root if present
+    static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "demo-site")
+    if os.path.isdir(static_dir):
+        from fastapi.staticfiles import StaticFiles
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
     return app
+
 
 
 app = create_app()

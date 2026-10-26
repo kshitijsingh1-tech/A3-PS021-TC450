@@ -1,0 +1,4 @@
+*.pdf
+.pytest_cache/
+tests/
+*.log

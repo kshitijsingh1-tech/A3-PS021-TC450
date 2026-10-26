@@ -69,9 +69,11 @@ function randHex(len) { return [...Array(len)].map(() => Math.floor(Math.random(
   const resetBtn = document.getElementById('smResetBtn');
   let running = false;
 
+  const placeholderHTML = '<div class="log-placeholder">Click <strong>Normal Path</strong> or <strong>Crash Recovery Path</strong> above to watch live state transitions...</div>';
+
   function clearAll() {
     nodes.forEach(n => n.classList.remove('active'));
-    if (logEl) logEl.innerHTML = '';
+    if (logEl) logEl.innerHTML = placeholderHTML;
   }
 
   function highlight(state) {
@@ -84,7 +86,7 @@ function randHex(len) { return [...Array(len)].map(() => Math.floor(Math.random(
     if (!logEl) return;
     const entry = document.createElement('div');
     entry.className = 'log-entry';
-    entry.innerHTML = `<span class="log-state" style="color: var(--state-${from.toLowerCase()})">${from}</span> <span class="log-arrow">-></span> <span class="log-state" style="color: var(--state-${to.toLowerCase()})">${to}</span> <span style="color: var(--ink-dim)">${detail}</span>`;
+    entry.innerHTML = `<span class="log-state" style="color: var(--state-${from.toLowerCase()})">${from}</span> <span class="log-arrow">&rarr;</span> <span class="log-state" style="color: var(--state-${to.toLowerCase()})">${to}</span> <span style="color: var(--ink-dim); margin-left: 6px;">${detail}</span>`;
     logEl.appendChild(entry);
     logEl.scrollTop = logEl.scrollHeight;
   }
@@ -92,11 +94,13 @@ function randHex(len) { return [...Array(len)].map(() => Math.floor(Math.random(
   async function runPath(steps) {
     if (running) return;
     running = true;
-    clearAll();
+    nodes.forEach(n => n.classList.remove('active'));
+    if (logEl) logEl.innerHTML = '';
     for (const step of steps) {
       await sleep(800);
       highlight(step.state);
       if (step.from) log(step.from, step.state, step.detail || '');
+
       else {
         const entry = document.createElement('div');
         entry.className = 'log-entry';

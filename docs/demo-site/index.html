@@ -254,32 +254,92 @@
       </div>
       <div class="sm-container">
         <div class="sm-diagram" id="smDiagram">
-          <div class="sm-node sm-received" id="smReceived" data-state="RECEIVED">
-            <div class="sm-node-label">RECEIVED</div>
-            <div class="sm-node-desc">Registered in DB</div>
+          <!-- Primary Lifecycle Pipeline -->
+          <div class="sm-lane sm-lane-primary">
+            <div class="sm-lane-title">
+              <span class="sm-lane-pill">HAPPY PATH</span>
+              <span class="sm-lane-subtitle">Standard Execution Pipeline</span>
+            </div>
+            <div class="sm-pipeline">
+              <div class="sm-node sm-received" id="smReceived" data-state="RECEIVED">
+                <span class="sm-step-badge">01</span>
+                <div class="sm-node-label">RECEIVED</div>
+                <div class="sm-node-desc">Atomic DB Registration</div>
+              </div>
+
+              <div class="sm-edge sm-edge-h" id="smEdgeRA">
+                <span class="sm-edge-label">accept</span>
+                <span class="sm-edge-arrow">&rarr;</span>
+              </div>
+
+              <div class="sm-node sm-accepted" id="smAccepted" data-state="ACCEPTED">
+                <span class="sm-step-badge">02</span>
+                <div class="sm-node-label">ACCEPTED</div>
+                <div class="sm-node-desc">Validated &amp; Enqueued</div>
+              </div>
+
+              <div class="sm-edge sm-edge-h" id="smEdgeAR">
+                <span class="sm-edge-label">start</span>
+                <span class="sm-edge-arrow">&rarr;</span>
+              </div>
+
+              <div class="sm-node sm-running" id="smRunning" data-state="RUNNING">
+                <span class="sm-step-badge">03</span>
+                <div class="sm-node-label">RUNNING</div>
+                <div class="sm-node-desc">Executing Side Effect</div>
+              </div>
+
+              <div class="sm-edge sm-edge-h" id="smEdgeRC">
+                <span class="sm-edge-label">commit</span>
+                <span class="sm-edge-arrow">&rarr;</span>
+              </div>
+
+              <div class="sm-node sm-completed" id="smCompleted" data-state="COMPLETED">
+                <span class="sm-step-badge terminal-badge">&#10003;</span>
+                <div class="sm-node-label">COMPLETED</div>
+                <div class="sm-node-desc">Durable Terminal State</div>
+              </div>
+            </div>
           </div>
-          <div class="sm-edge sm-edge-ra" id="smEdgeRA"><div class="sm-edge-label">accept</div></div>
-          <div class="sm-node sm-accepted" id="smAccepted" data-state="ACCEPTED">
-            <div class="sm-node-label">ACCEPTED</div>
-            <div class="sm-node-desc">Ready to execute</div>
-          </div>
-          <div class="sm-edge sm-edge-ar" id="smEdgeAR"><div class="sm-edge-label">start</div></div>
-          <div class="sm-node sm-running" id="smRunning" data-state="RUNNING">
-            <div class="sm-node-label">RUNNING</div>
-            <div class="sm-node-desc">Executing side effect</div>
-          </div>
-          <div class="sm-edge sm-edge-rc" id="smEdgeRC"><div class="sm-edge-label">commit</div></div>
-          <div class="sm-node sm-completed" id="smCompleted" data-state="COMPLETED">
-            <div class="sm-node-label">COMPLETED</div>
-            <div class="sm-node-desc">Terminal state</div>
-          </div>
-          <div class="sm-node sm-recovering" id="smRecovering" data-state="RECOVERING">
-            <div class="sm-node-label">RECOVERING</div>
-            <div class="sm-node-desc">Crash detected</div>
-          </div>
-          <div class="sm-node sm-failed" id="smFailed" data-state="FAILED">
-            <div class="sm-node-label">FAILED</div>
-            <div class="sm-node-desc">Error state</div>
+
+          <!-- Fault Recovery & Guarded States -->
+          <div class="sm-lane sm-lane-secondary">
+            <div class="sm-lane-title">
+              <span class="sm-lane-pill pill-warning">RESILIENCY</span>
+              <span class="sm-lane-subtitle">Automated Crash Recovery &amp; Failure Protocols</span>
+            </div>
+            <div class="sm-branch-grid">
+              <div class="sm-branch-card">
+                <div class="sm-branch-connector">
+                  <span class="connector-label">Crash Mid-Execution</span>
+                  <span class="connector-arrow">&darr;</span>
+                </div>
+                <div class="sm-node sm-recovering" id="smRecovering" data-state="RECOVERING">
+                  <span class="sm-step-badge badge-warning">&#9889;</span>
+                  <div class="sm-node-label">RECOVERING</div>
+                  <div class="sm-node-desc">Startup Inspection via Durable Ledger</div>
+                </div>
+                <div class="sm-branch-actions">
+                  <span class="branch-tag tag-resume">Resume to RUNNING if uncommitted</span>
+                  <span class="branch-tag tag-reconcile">Reconcile to COMPLETED if committed</span>
+                </div>
+              </div>
+
+              <div class="sm-branch-card">
+                <div class="sm-branch-connector">
+                  <span class="connector-label">Validation Error / Rejection</span>
+                  <span class="connector-arrow">&darr;</span>
+                </div>
+                <div class="sm-node sm-failed" id="smFailed" data-state="FAILED">
+                  <span class="sm-step-badge badge-error">&#10007;</span>
+                  <div class="sm-node-label">FAILED</div>
+                  <div class="sm-node-desc">Terminal Error State</div>
+                </div>
+                <div class="sm-branch-actions">
+                  <span class="branch-tag tag-retry">Re-enqueued to ACCEPTED on retry</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="sm-controls">
@@ -290,8 +350,11 @@
             <button class="btn btn-secondary sm-path-btn" data-path="crash" id="smCrashBtn">Crash Recovery Path</button>
             <button class="btn btn-secondary sm-path-btn" data-path="reset" id="smResetBtn">Reset</button>
           </div>
-          <div class="sm-log" id="smLog"></div>
+          <div class="sm-log" id="smLog">
+            <div class="log-placeholder">Click <strong>Normal Path</strong> or <strong>Crash Recovery Path</strong> above to watch live state transitions...</div>
+          </div>
         </div>
+
       </div>
     </section>
 

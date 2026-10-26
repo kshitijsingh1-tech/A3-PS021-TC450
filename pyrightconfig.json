@@ -1,0 +1,12 @@
+{
+  "include": [
+    "aiori",
+    "src",
+    "tests"
+  ],
+  "extraPaths": [
+    "d:/aiori",
+    "d:/aiori/src"
+  ],
+  "pythonVersion": "3.12"
+}
